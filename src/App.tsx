@@ -308,32 +308,46 @@ export default function App() {
     }));
   }
 
-  function goNext() {
-    setSession((prev) => {
-      const nextIndex = Math.min(prev.progress.currentIndex + 1, prev.progress.order.length - 1);
-      const completedAt = nextIndex === prev.progress.order.length - 1 && Object.keys(prev.progress.answersById).length === prev.progress.order.length
-        ? nowMs()
-        : prev.progress.completedAt;
-      return {
-        ...prev,
-        progress: {
-          ...prev.progress,
-          currentIndex: nextIndex,
-          completedAt,
-        },
-      };
-    });
+  function findNextNotCorrectIndex(fromIndex: number): number {
+  if (total === 0) return 0;
+
+  // Build a quick lookup of correctness
+  const isCorrectById = new Map<string, boolean>();
+  for (const [qid, att] of Object.entries(session.progress.answersById)) {
+    isCorrectById.set(qid, !!att.isCorrect);
   }
 
-  function jumpTo(index: number) {
-    setSession((prev) => ({
+  // If everything is correct, stay where you are
+  const allCorrect = orderedQuestions.every((q) => isCorrectById.get(q.id) === true);
+  if (allCorrect) return fromIndex;
+
+  // Search forward, wrap around, find the next question not answered correctly
+  for (let step = 1; step <= total; step++) {
+    const idx = (fromIndex + step) % total;
+    const q = orderedQuestions[idx];
+    const ok = isCorrectById.get(q.id) === true;
+    if (!ok) return idx;
+  }
+
+  return fromIndex;
+}
+
+  function goNext() {
+  setSession((prev) => {
+    const nextIndex = Math.min(prev.progress.currentIndex + 1, prev.progress.order.length - 1);
+    const completedAt = nextIndex === prev.progress.order.length - 1 && Object.keys(prev.progress.answersById).length === prev.progress.order.length
+      ? nowMs()
+      : prev.progress.completedAt;
+    return {
       ...prev,
       progress: {
         ...prev.progress,
-        currentIndex: Math.min(Math.max(index, 0), prev.progress.order.length - 1),
+        currentIndex: nextIndex,
+        completedAt,
       },
-    }));
-  }
+    };
+  });
+}
 
   function markMcq(question: McqQuestion, chosen: string) {
     const isCorrect = chosen === question.answerId;
