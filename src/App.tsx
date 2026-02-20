@@ -1624,16 +1624,24 @@ function shuffleArray<T>(arr: T[], seed?: number): T[] {
 }
 
 function buildDefaultSession(config: AppConfig): SessionState {
-  const order = config.questions.map((q) => q.id);
+  const baseOrder = config.questions.map((q) => q.id);
+
+  // Default settings
+  const settings = { shuffle: true, showExplanations: true, autoAdvance: false };
+
+  // Shuffle immediately on first load if shuffle is enabled
+  const order = settings.shuffle ? shuffleArray(baseOrder) : baseOrder;
+
   return {
     config,
-    settings: { shuffle: true, showExplanations: true, autoAdvance: true },
+    settings,
     progress: {
       currentIndex: 0,
       order,
       answersById: {},
       retryVersionById: {},
       startedAt: Date.now(),
+      completedAt: undefined,
     },
   };
 }
